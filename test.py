@@ -19,6 +19,7 @@ class BullBoard:
 
         self.error_status = False
         self.color_mode = "dark"
+        self.color_mode_icon_path = 'light_mode_icon.png'
 
         # initializes GUI
         self.root = CTk()
@@ -47,7 +48,8 @@ class BullBoard:
         self.root.bind("<Return>", self.onButtonClick)
 
         # frame that contains the company name, stock price, and logo image labels
-        self.mainframe = CTkFrame(self.root, width=300, height=150, fg_color="transparent")
+        self.mainframe = CTkFrame(
+            self.root, width=300, height=150, fg_color="transparent")
         self.mainframe.pack()
         self.mainframe.pack_forget()
 
@@ -69,7 +71,7 @@ class BullBoard:
 
         self.image = CTkImage(Image.open('bullboard.png'), size=(128, 128))
         self.main_image = CTkLabel(self.root, text="", image=self.image)
-        self.main_image.pack(pady=(50,20))
+        self.main_image.pack(pady=(50, 20))
 
         self.showColorModeButton()
 
@@ -77,8 +79,10 @@ class BullBoard:
         self.root.mainloop()
 
     def showColorModeButton(self):
-        self.color_mode_icon = CTkImage(Image.open('light_mode_icon.png'), size=(32, 32))
-        self.color_mode_button = CTkButton(self.root, text="", image=self.color_mode_icon, width=8, fg_color="transparent")
+        self.color_mode_icon = CTkImage(Image.open(
+            self.color_mode_icon_path), size=(32, 32))
+        self.color_mode_button = CTkButton(
+            self.root, text="", command=self.changeColorMode, image=self.color_mode_icon, width=8, fg_color="transparent")
         self.color_mode_button.pack(anchor=E)
 
     # method to
@@ -91,11 +95,16 @@ class BullBoard:
     def getCompanyName(self):
         ticker_symbol = str(self.ticker_symbol.get())
 
+        b = 1
+        if ticker_symbol == "":
+            b = 0
+
         company_name_url = "https://twelve-data1.p.rapidapi.com/stocks"
         querystring = {"exchange": "NASDAQ",
                        "symbol": ticker_symbol, "format": "json"}
 
         try:
+            1 / b
             self.main_image.destroy()
             self.color_mode_button.destroy()
             self.root.geometry("300x420")
@@ -104,13 +113,20 @@ class BullBoard:
                 "GET", company_name_url, headers=self.api_headers, params=querystring).json()
             self.company_name.set(company_name['data'][0]['name'])
             self.company_name_label.set("Showing information for: ")
+        except ZeroDivisionError:
+            self.setQuestionMarkImage()
+            messagebox.showinfo(
+                "Error", "Please enter a ticker symbol.")
+            self.error_status = True
         except KeyError:
             self.setQuestionMarkImage()
+            self.showColorModeButton()
             messagebox.showinfo(
                 "Error", "On cooldown, please try again later.")
             self.error_status = True
         except IndexError:
             self.setQuestionMarkImage()
+            self.showColorModeButton()
             messagebox.showinfo("Error", "Ticker symbol not found.")
             self.error_status = True
 
@@ -151,12 +167,26 @@ class BullBoard:
                 'company_logo.png'), size=(128, 128))
             self.main_image = CTkLabel(
                 self.mainframe, text="", image=self.image)
-            self.main_image.grid(column=0, row=3, columnspan=2, pady=(20,0))
+            self.main_image.grid(column=0, row=3, columnspan=2, pady=(20, 0))
 
             self.showColorModeButton()
             os.remove('company_logo.png')
         except (IndexError, KeyError):
             self.setQuestionMarkImage()
+
+    def changeColorMode(self):
+        if self.color_mode == "dark":
+            self.color_mode = 'light'
+            set_appearance_mode(self.color_mode)
+            self.color_mode_button.destroy()
+            self.color_mode_icon_path = 'dark_mode_icon.png'
+            self.showColorModeButton()
+        elif self.color_mode == "light":
+            self.color_mode = 'dark'
+            set_appearance_mode(self.color_mode)
+            self.color_mode_button.destroy()
+            self.color_mode_icon_path = 'light_mode_icon.png'
+            self.showColorModeButton()
 
     # method that calls all other methods of the program when the user presses the button.
     def onButtonClick(self, event=None):
