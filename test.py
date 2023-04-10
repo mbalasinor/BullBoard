@@ -82,7 +82,7 @@ class BullBoard:
         self.color_mode_button.pack(anchor=E)
 
     # method to
-    def setQuestionMark(self):
+    def setQuestionMarkImage(self):
         self.image = CTkImage(Image.open('question_mark.png'), size=(128, 128))
         self.main_image = CTkLabel(self.mainframe, text="", image=self.image)
         self.main_image.grid(column=0, row=3, columnspan=2)
@@ -105,12 +105,12 @@ class BullBoard:
             self.company_name.set(company_name['data'][0]['name'])
             self.company_name_label.set("Showing information for: ")
         except KeyError:
-            self.setQuestionMark()
+            self.setQuestionMarkImage()
             messagebox.showinfo(
                 "Error", "On cooldown, please try again later.")
             self.error_status = True
         except IndexError:
-            self.setQuestionMark()
+            self.setQuestionMarkImage()
             messagebox.showinfo("Error", "Ticker symbol not found.")
             self.error_status = True
 
@@ -156,7 +156,7 @@ class BullBoard:
             self.showColorModeButton()
             os.remove('company_logo.png')
         except (IndexError, KeyError):
-            self.setQuestionMark()
+            self.setQuestionMarkImage()
 
     # method that calls all other methods of the program when the user presses the button.
     def onButtonClick(self, event=None):
