@@ -1,9 +1,11 @@
 from customtkinter import *
 from customtkinter import CTk
 from tkinter import messagebox
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 from dotenv import load_dotenv
+from yahooquery import Ticker
 import requests
+import re
 import os
 
 
@@ -12,14 +14,14 @@ class BullBoard:
         load_dotenv()
 
         # defines headers for api usage
-        self.api_headers = {
-            "X-RapidAPI-Key": os.getenv('X-RapidAPI-Key'),
-            "X-RapidAPI-Host": "twelve-data1.p.rapidapi.com"
-        }
+        # self.api_headers = {
+        #     "X-RapidAPI-Key": os.getenv('X-RapidAPI-Key'),
+        #     "X-RapidAPI-Host": "twelve-data1.p.rapidapi.com"
+        # }
 
         self.error_status = False
         self.color_mode = "dark"
-        self.color_mode_icon_path = 'light_mode_icon.png'
+        self.color_mode_icon_path = "light_mode_icon.png"
 
         # initializes GUI
         self.root = CTk()
@@ -33,17 +35,17 @@ class BullBoard:
 
         # creates and positions all visual elements of GUI
         CTkLabel(self.root, text="Please enter a ticker symbol:",
-                 font=("Segoe UI", 16)).pack(pady=20)
+                 font=("Segoe UI", 18, "bold")).pack(pady=20)
 
-        self.ticker_symbol = StringVar()
+        self.ticker_symbol_input = StringVar()
         ticker_symbol_entry = CTkEntry(
-            self.root, width=60, font=("Segoe UI", 14), textvariable=self.ticker_symbol)
+            self.root, width=80, font=("Segoe UI", 16), textvariable=self.ticker_symbol_input)
         ticker_symbol_entry.pack(padx=10)
         # focuses cursor to the text box to make the user experience more seamless
         ticker_symbol_entry.focus()
 
-        CTkButton(self.root, text="Go", command=self.onButtonClick, font=("Segoe UI", 14),
-                  width=60).pack(padx=10, pady=2)
+        CTkButton(self.root, text="Go", command=self.onButtonClick, font=("Segoe UI", 16, "bold"),
+                  width=80).pack(padx=10, pady=2)
         # binds pressing "enter" to the button
         self.root.bind("<Return>", self.onButtonClick)
 
@@ -54,19 +56,19 @@ class BullBoard:
         self.mainframe.pack_forget()
 
         self.company_name_label = StringVar()
-        CTkLabel(self.mainframe, textvariable=self.company_name_label, font=("Segoe UI", 14)).grid(
+        CTkLabel(self.mainframe, textvariable=self.company_name_label, font=("Segoe UI", 16)).grid(
             column=0, row=0, padx=10)
 
         self.company_name = StringVar()
-        CTkLabel(self.mainframe, textvariable=self.company_name, font=("Segoe UI", 14)).grid(
+        CTkLabel(self.mainframe, textvariable=self.company_name, font=("Segoe UI", 16)).grid(
             column=1, row=0, sticky=E, padx=10)
 
         self.stock_price_label = StringVar()
-        CTkLabel(self.mainframe, textvariable=self.stock_price_label, font=("Segoe UI", 14)).grid(
+        CTkLabel(self.mainframe, textvariable=self.stock_price_label, font=("Segoe UI", 16)).grid(
             column=0, row=1, sticky=W, padx=10)
 
         self.stock_price = StringVar()
-        CTkLabel(self.mainframe, textvariable=self.stock_price, font=("Segoe UI", 14)).grid(
+        CTkLabel(self.mainframe, textvariable=self.stock_price, font=("Segoe UI", 16)).grid(
             column=1, row=1, sticky=E, padx=10)
 
         self.image = CTkImage(Image.open('bullboard.png'), size=(128, 128))
@@ -78,6 +80,7 @@ class BullBoard:
         # initializes GUI
         self.root.mainloop()
 
+    # method to display color mode change button
     def showColorModeButton(self):
         self.color_mode_icon = CTkImage(Image.open(
             self.color_mode_icon_path), size=(32, 32))
@@ -87,44 +90,66 @@ class BullBoard:
 
     # method to display question mark image in cases of error
     def setQuestionMarkImage(self):
-        self.main_image.destroy()
-        self.color_mode_button.destroy()
-        self.image = CTkImage(Image.open('question_mark.png'), size=(128, 128))
+        try:
+            self.main_image.destroy()
+        except:
+            pass
+        try:
+            self.color_mode_button.destroy()
+        except:
+            pass
+
+        self.image = CTkImage(Image.open("question_mark.png"), size=(128, 128))
         self.main_image = CTkLabel(self.mainframe, text="", image=self.image)
         self.main_image.grid(column=0, row=3, columnspan=2)
 
-    # uses API to find and display name of company using inputted ticker symbol. returns errors based on api rate limits and non-existant ticker symbols, respectively.
+    # uses API to find and display name of company using inputted ticker symbol. returns errors in cases of non-existant ticker symbols or the DJIA (not currently supported).
     def getCompanyName(self):
-        ticker_symbol = str(self.ticker_symbol.get())
+        self.ticker_symbol = str(self.ticker_symbol_input.get())
+        self.company = Ticker(self.ticker_symbol)
 
         b = 1
-        if ticker_symbol == "":
+        if self.ticker_symbol == "":
             b = 0
-
-        company_name_url = "https://twelve-data1.p.rapidapi.com/stocks"
-        querystring = {"exchange": "NASDAQ",
-                       "symbol": ticker_symbol, "format": "json"}
 
         try:
             1 / b
-            self.root.geometry("300x420")
             self.mainframe.pack(pady=20)
-            company_name = requests.request(
-                "GET", company_name_url, headers=self.api_headers, params=querystring).json()
-            self.company_name.set(company_name['data'][0]['name'])
+
+            self.company_website = self.company.asset_profile[self.ticker_symbol]["website"]
+
+            match = re.search(
+                r"(?<=\/\/)(www\.)?([^\/]+)\.([^\/]+)", self.company_website)
+            self.company_website = match.group(2) + '.' + match.group(3)
+
+            try:
+                self.name = self.company.quotes[self.ticker_symbol.upper(
+                )]['displayName']
+            except:
+                self.name = self.company.quotes[self.ticker_symbol.upper(
+                )]['shortName']
+
+            x = 240 + 8 * len(self.name)
+            self.root.geometry(f"{x}x420")
+
+            self.company_name.set(self.name)
             self.company_name_label.set("Showing information for: ")
         except ZeroDivisionError:
+            self.root.geometry("300x175")
             self.setQuestionMarkImage()
+            self.showColorModeButton()
             messagebox.showinfo(
                 "Error", "Please enter a ticker symbol.")
             self.error_status = True
         except KeyError:
+            self.root.geometry("300x400")
             self.setQuestionMarkImage()
             self.showColorModeButton()
             messagebox.showinfo(
-                "Error", "On cooldown, please try again later.")
+                "Error", "The Dow Jones Industrial Average is not currently supported :(")
             self.error_status = True
-        except IndexError:
+        except TypeError:
+            self.root.geometry("300x400")
             self.setQuestionMarkImage()
             self.showColorModeButton()
             messagebox.showinfo("Error", "Ticker symbol not found.")
@@ -132,34 +157,26 @@ class BullBoard:
 
     # uses API to find and display the stock price of company using inputted ticker symbol. displays nothing in cases of error.
     def getStockPrice(self):
-        ticker_symbol = str(self.ticker_symbol.get())
-        stock_price_url = "https://twelve-data1.p.rapidapi.com/price"
-        querystring = {"symbol": ticker_symbol}
-        try:
-            stock_price = requests.request(
-                "GET", stock_price_url, headers=self.api_headers, params=querystring).json()
-            stock_price = str(round(float(stock_price['price']), 2))
-            self.stock_price.set(f"${stock_price}")
-            self.stock_price_label.set("Latest price per share: ")
-        except:
-            self.stock_price.set("")
+        stock_price = self.company.summary_detail[self.ticker_symbol]['open']
+        stock_price = str(round(float(stock_price), 2))
+        self.stock_price.set(f"${stock_price}")
+        self.stock_price_label.set("Opening price per share: ")
 
     # uses API to find and display the logo of company using inputted ticker symbol. displays an image of a question mark in cases of error.
     def getCompanyLogo(self):
-        ticker_symbol = str(self.ticker_symbol.get())
+        try:
+            try:
+                self.main_image.destroy()
+            except:
+                pass
 
-        url = "https://twelve-data1.p.rapidapi.com/logo"
-        querystring = {"symbol": ticker_symbol}
+            try:
+                self.color_mode_button.destroy()
+            except:
+                pass
 
-        try:  # first block gets logo image link with API, second block saves image locally, third block displays the image in the program and deletes it locally
-            company_logo_url = requests.request(
-                "GET", url, headers=self.api_headers, params=querystring).json()
-            company_logo_url = company_logo_url['url']
-
-            self.main_image.destroy()
-            self.color_mode_button.destroy()
-
-            response = requests.get(company_logo_url)
+            response = requests.get(
+                f'https://logo.uplead.com/{self.company_website}')
             with open("company_logo.png", 'wb') as f:
                 f.write(response.content)
 
@@ -176,7 +193,11 @@ class BullBoard:
             os.remove('company_logo.png')
         except (IndexError, KeyError):
             self.setQuestionMarkImage()
+        except UnidentifiedImageError:
+            self.root.geometry("300x270")
+            self.showColorModeButton()
 
+    # method to change GUI if user wants to change the color mode (light/dark)
     def changeColorMode(self):
         if self.color_mode == "dark":
             self.color_mode = 'light'
