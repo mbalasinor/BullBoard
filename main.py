@@ -2,7 +2,6 @@ from customtkinter import *
 from customtkinter import CTk
 from tkinter import messagebox
 from PIL import Image, UnidentifiedImageError
-from dotenv import load_dotenv
 from yahooquery import Ticker
 import requests
 import re
@@ -11,14 +10,7 @@ import os
 
 class BullBoard:
     def __init__(self):
-        load_dotenv()
-
-        # defines headers for api usage
-        # self.api_headers = {
-        #     "X-RapidAPI-Key": os.getenv('X-RapidAPI-Key'),
-        #     "X-RapidAPI-Host": "twelve-data1.p.rapidapi.com"
-        # }
-
+        # sets values for error checking and color mode changing
         self.error_status = False
         self.color_mode = "dark"
         self.color_mode_icon_path = "light_mode_icon.png"
@@ -45,7 +37,7 @@ class BullBoard:
         ticker_symbol_entry.focus()
 
         CTkButton(self.root, text="Go", command=self.onButtonClick, font=("Segoe UI", 16, "bold"),
-                  width=80).pack(padx=10, pady=2)
+                  width=80).pack(padx=10, pady=3)
         # binds pressing "enter" to the button
         self.root.bind("<Return>", self.onButtonClick)
 
