@@ -221,5 +221,10 @@ class BullBoard:
             self.getCompanyLogo()
             break
 
+        try:
+            os.remove('company_logo.png')
+        except:
+            pass
+
 
 BullBoard()
